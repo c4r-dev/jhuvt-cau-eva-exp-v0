@@ -3,20 +3,31 @@
 import React, { useState, useEffect } from 'react';
 import data from '../public/data.json';
 
+interface ExperimentalMethod {
+  'Experimental Methods': string;
+  Correct: string;
+  'correctness of methods selection': string;
+  fix1: string;
+  fix1correct: string;
+  fix2: string;
+  'fix2 correct': string;
+  fix3: string;
+  'fix3 correct': string;
+  fix4: string;
+  'fix4 correct': string;
+}
+
 interface Question {
-  Question: string;
   Example: string;
   'Study Description': string;
-  Methodology1: string;
-  Methodology2: string;
-  Results1: string;
-  Results2: string;
-  'Level of Explanation': string;
+  'Independent Variable': string;
+  'Dependent Variable': string;
+  subElements: ExperimentalMethod[];
 }
 
 interface UserResponse {
   questionIndex: number;
-  selectedAnswer: string;
+  selectedMethodIndex: number;
   reasoning: string;
   isCorrect: boolean;
   question: Question;
@@ -30,7 +41,7 @@ interface Submission {
 
 export default function Home() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [selectedMethodIndex, setSelectedMethodIndex] = useState<number | null>(null);
   const [reasoning, setReasoning] = useState<string>('');
   const [userResponses, setUserResponses] = useState<UserResponse[]>([]);
   const [showReviewScreen, setShowReviewScreen] = useState(false);
@@ -39,35 +50,13 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const questions: Question[] = data;
 
-  // Define the 4 selection options
-  const selectionOptions = [
-    {
-      key: 'Correlational',
-      title: 'Correlational',
-      description: 'The study shows a statistical association between two variables but cannot establish causation or prediction.'
-    },
-    {
-      key: 'Predictive',
-      title: 'Predictive', 
-      description: 'The study demonstrates that one variable can be used to forecast or predict levels of another variable.'
-    },
-    {
-      key: 'Causal',
-      title: 'Causal',
-      description: 'The study establishes that changes in one variable directly cause changes to another variable.'
-    },
-    {
-      key: 'Mechanistic',
-      title: 'Mechanistic',
-      description: 'The study demonstrates causation and characterizes the type of relationship between variables (linear, curvilinear, etc.).'
-    }
-  ];
-
-  // Get shuffled options for current question (deterministic based on question index)
-  const getShuffledOptions = (questionIndex: number) => {
+  // Get shuffled experimental methods for current question (deterministic based on question index)
+  const getShuffledMethods = (questionIndex: number) => {
+    if (!questions[questionIndex]?.subElements) return [];
+    
     // Simple seeded random using question index
     const seed = questionIndex * 9301 + 49297; // Simple linear congruential generator
-    const shuffled = [...selectionOptions];
+    const shuffled = [...questions[questionIndex].subElements];
     
     for (let i = shuffled.length - 1; i > 0; i--) {
       const random = ((seed * (i + 1)) % 233280) / 233280; // Normalize to 0-1
@@ -77,16 +66,16 @@ export default function Home() {
     return shuffled;
   };
 
-  const shuffledOptions = getShuffledOptions(currentQuestionIndex);
+  const shuffledMethods = getShuffledMethods(currentQuestionIndex);
 
   const handleNext = () => {
-    if (selectedAnswer) {
+    if (selectedMethodIndex !== null) {
       // Save current response
       const response: UserResponse = {
         questionIndex: currentQuestionIndex,
-        selectedAnswer: selectedAnswer,
+        selectedMethodIndex: selectedMethodIndex,
         reasoning: reasoning,
-        isCorrect: isCorrectAnswer(selectedAnswer),
+        isCorrect: isCorrectAnswer(selectedMethodIndex),
         question: questions[currentQuestionIndex]
       };
       
@@ -95,7 +84,7 @@ export default function Home() {
     
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
-      setSelectedAnswer(null);
+      setSelectedMethodIndex(null);
       setReasoning('');
     }
   };
@@ -103,7 +92,7 @@ export default function Home() {
   const handleBack = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
-      setSelectedAnswer(null);
+      setSelectedMethodIndex(null);
       setReasoning('');
     }
   };
@@ -112,16 +101,17 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentQuestionIndex]);
 
-  const handleAnswerSelect = (answer: string) => {
-    setSelectedAnswer(answer);
+  const handleMethodSelect = (methodIndex: number) => {
+    setSelectedMethodIndex(methodIndex);
     // Delay scroll to allow DOM to update with reasoning box
     setTimeout(() => {
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }, 100);
   };
 
-  const isCorrectAnswer = (answer: string) => {
-    return answer === currentQuestion['Level of Explanation'];
+  const isCorrectAnswer = (methodIndex: number) => {
+    if (!questions[currentQuestionIndex]?.subElements?.[methodIndex]) return false;
+    return questions[currentQuestionIndex].subElements[methodIndex].Correct === 'Y';
   };
 
   const handleReviewResponses = async () => {
@@ -129,12 +119,12 @@ export default function Home() {
       setLoading(true);
       
       // Save final response for last question if it exists
-      if (selectedAnswer && currentQuestionIndex === questions.length - 1) {
+      if (selectedMethodIndex !== null && currentQuestionIndex === questions.length - 1) {
         const finalResponse: UserResponse = {
           questionIndex: currentQuestionIndex,
-          selectedAnswer: selectedAnswer,
+          selectedMethodIndex: selectedMethodIndex,
           reasoning: reasoning,
-          isCorrect: isCorrectAnswer(selectedAnswer),
+          isCorrect: isCorrectAnswer(selectedMethodIndex),
           question: questions[currentQuestionIndex]
         };
         
@@ -179,7 +169,7 @@ export default function Home() {
   const handleStartOver = () => {
     // Reset all state to initial values
     setCurrentQuestionIndex(0);
-    setSelectedAnswer(null);
+    setSelectedMethodIndex(null);
     setReasoning('');
     setUserResponses([]);
     setShowReviewScreen(false);
@@ -191,9 +181,9 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const getBackgroundColor = (answer: string) => {
-    if (selectedAnswer === answer) {
-      return isCorrectAnswer(answer) ? '#e6ffe6' : '#ffe6e6';
+  const getBackgroundColor = (methodIndex: number) => {
+    if (selectedMethodIndex === methodIndex) {
+      return isCorrectAnswer(methodIndex) ? '#e6ffe6' : '#ffe6e6';
     }
     return '#f9f9f9';
   };
@@ -256,8 +246,13 @@ export default function Home() {
             </div>
             <div style={{ marginBottom: '15px', padding: '15px', backgroundColor: '#e8f5e8', borderRadius: '5px', border: '1px solid #28a745' }}>
               <p style={{ margin: '0', lineHeight: '1.5', color: '#28a745' }}>
-                <strong>Correct Answer: {questions[activeTab]?.['Level of Explanation']}</strong> - {selectionOptions.find(option => option.key === questions[activeTab]?.['Level of Explanation'])?.description}
+                <strong>Correct Experimental Methods:</strong>
               </p>
+              {questions[activeTab]?.subElements?.filter(method => method.Correct === 'Y').map((method, index) => (
+                <p key={index} style={{ margin: '5px 0', lineHeight: '1.5', color: '#28a745' }}>
+                  • {method['Experimental Methods']}
+                </p>
+              ))}
             </div>
           </div>
 
@@ -335,61 +330,50 @@ export default function Home() {
       <div style={{ marginBottom: '20px' }}>
         <h2>Study Description</h2>
         <div style={{ display: 'flex', border: '1px solid #ccc', padding: '10px', backgroundColor: 'white' }}>
-          <p style={{ textAlign: 'left', lineHeight: '1.6', margin: '0', flex: '1', width: '100%', textWrap: 'wrap' }}>{currentQuestion['Study Description']}</p>
-        </div>
-      </div>
-
-      <div style={{ marginBottom: '20px' }}>
-        <h2>Methodology</h2>
-        <div style={{ display: 'flex', border: '1px solid #ccc', padding: '10px', flexDirection: 'column', backgroundColor: 'white' }}>
-          <p style={{ textAlign: 'left', lineHeight: '1.6', margin: '0 0 10px 0', flex: '1', width: '100%', textWrap: 'wrap' }}>{currentQuestion.Methodology1}</p>
-          <p style={{ textAlign: 'left', lineHeight: '1.6', margin: '0', flex: '1', width: '100%', textWrap: 'wrap' }}>{currentQuestion.Methodology2}</p>
+          <div style={{ flex: '1', width: '100%' }}>
+            <p style={{ textAlign: 'left', lineHeight: '1.6', margin: '0 0 10px 0', textWrap: 'wrap' }}>{currentQuestion['Study Description']}</p>
+            <p style={{ textAlign: 'left', lineHeight: '1.6', margin: '0 0 10px 0', textWrap: 'wrap' }}><strong>Independent Variable:</strong> {currentQuestion['Independent Variable']}</p>
+            <p style={{ textAlign: 'left', lineHeight: '1.6', margin: '0', textWrap: 'wrap' }}><strong>Dependent Variable:</strong> {currentQuestion['Dependent Variable']}</p>
+          </div>
         </div>
       </div>
 
       <div style={{ marginBottom: '30px' }}>
-        <h2>Results</h2>
-        <div style={{ display: 'flex', border: '1px solid #ccc', padding: '10px', flexDirection: 'column', backgroundColor: 'white' }}>
-          <p style={{ textAlign: 'left', lineHeight: '1.6', margin: '0 0 10px 0', flex: '1', width: '100%', textWrap: 'wrap' }}>{currentQuestion.Results1}</p>
-          <p style={{ textAlign: 'left', lineHeight: '1.6', margin: '0', flex: '1', width: '100%', textWrap: 'wrap' }}>{currentQuestion.Results2}</p>
-        </div>
-      </div>
-
-      <div style={{ marginBottom: '30px' }}>
+        <h2>Experimental Methods</h2>
         <div style={{ display: 'flex', border: '1px solid #ccc', padding: '15px', flexDirection: 'column', backgroundColor: 'white' }}>
-          <h3 style={{ margin: '0 0 15px 0', textAlign: 'center' }}>Select the level of explanation that best describes this study:</h3>
+          <h3 style={{ margin: '0 0 15px 0', textAlign: 'center' }}>Select which Experimental Methods is correct:</h3>
           
-          {shuffledOptions.map((option, index) => (
+          {shuffledMethods.map((method, index) => (
             <div 
-              key={option.key}
+              key={index}
               style={{ 
                 display: 'flex', 
                 border: '1px solid #ddd', 
                 padding: '10px', 
-                marginBottom: index === shuffledOptions.length - 1 ? '0' : '10px', 
+                marginBottom: index === shuffledMethods.length - 1 ? '0' : '10px', 
                 cursor: 'pointer',
-                backgroundColor: getBackgroundColor(option.key),
+                backgroundColor: getBackgroundColor(index),
                 transition: 'background-color 0.2s ease'
               }}
               onMouseEnter={(e) => {
-                if (selectedAnswer !== option.key) {
+                if (selectedMethodIndex !== index) {
                   e.currentTarget.style.backgroundColor = '#e0e0e0';
                 }
               }}
               onMouseLeave={(e) => {
-                if (selectedAnswer !== option.key) {
-                  e.currentTarget.style.backgroundColor = getBackgroundColor(option.key);
+                if (selectedMethodIndex !== index) {
+                  e.currentTarget.style.backgroundColor = getBackgroundColor(index);
                 }
               }}
-              onClick={() => handleAnswerSelect(option.key)}
+              onClick={() => handleMethodSelect(index)}
             >
               <p style={{ textAlign: 'left', lineHeight: '1.6', margin: '0', flex: '1', width: '100%', textWrap: 'wrap' }}>
-                <strong>{option.title}</strong> - {option.description}
+                {method['Experimental Methods']}
               </p>
             </div>
           ))}
 
-          {selectedAnswer && isCorrectAnswer(selectedAnswer) && (
+          {selectedMethodIndex !== null && isCorrectAnswer(selectedMethodIndex) && (
             <div style={{ 
               display: 'flex', 
               border: '1px solid #ddd', 
@@ -420,6 +404,7 @@ export default function Home() {
         </div>
       </div>
 
+
       <div style={{ textAlign: 'center', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px' }}>
         {currentQuestionIndex > 0 && (
           <button 
@@ -441,14 +426,14 @@ export default function Home() {
           <button 
             className="button"
             onClick={handleNext}
-            disabled={!selectedAnswer || !isCorrectAnswer(selectedAnswer) || reasoning.length < 10}
+            disabled={selectedMethodIndex === null || !isCorrectAnswer(selectedMethodIndex) || reasoning.length < 10}
             style={{
               padding: '10px 20px',
               fontSize: '16px',
               border: 'none',
               borderRadius: '5px',
-              cursor: selectedAnswer && isCorrectAnswer(selectedAnswer) && reasoning.length >= 10 ? 'pointer' : 'not-allowed',
-              opacity: selectedAnswer && isCorrectAnswer(selectedAnswer) && reasoning.length >= 10 ? 1 : 0.5
+              cursor: selectedMethodIndex !== null && isCorrectAnswer(selectedMethodIndex) && reasoning.length >= 10 ? 'pointer' : 'not-allowed',
+              opacity: selectedMethodIndex !== null && isCorrectAnswer(selectedMethodIndex) && reasoning.length >= 10 ? 1 : 0.5
             }}
           >
             NEXT
@@ -457,14 +442,14 @@ export default function Home() {
           <button 
             className="button"
             onClick={handleReviewResponses}
-            disabled={!selectedAnswer || !isCorrectAnswer(selectedAnswer) || reasoning.length < 10}
+            disabled={selectedMethodIndex === null || !isCorrectAnswer(selectedMethodIndex) || reasoning.length < 10}
             style={{
               padding: '10px 20px',
               fontSize: '16px',
               border: 'none',
               borderRadius: '5px',
-              cursor: selectedAnswer && isCorrectAnswer(selectedAnswer) && reasoning.length >= 10 ? 'pointer' : 'not-allowed',
-              opacity: selectedAnswer && isCorrectAnswer(selectedAnswer) && reasoning.length >= 10 ? 1 : 0.5
+              cursor: selectedMethodIndex !== null && isCorrectAnswer(selectedMethodIndex) && reasoning.length >= 10 ? 'pointer' : 'not-allowed',
+              opacity: selectedMethodIndex !== null && isCorrectAnswer(selectedMethodIndex) && reasoning.length >= 10 ? 1 : 0.5
             }}
           >
             REVIEW RESPONSES
