@@ -8,7 +8,7 @@ interface ExperimentalMethod {
   Correct: string;
   'correctness of methods selection': string;
   fix1: string;
-  fix1correct: string;
+  'fix1 correct': string;
   fix2: string;
   'fix2 correct': string;
   fix3: string;
@@ -33,45 +33,56 @@ interface UserResponse {
   question: Question;
 }
 
-interface Submission {
-  _id: string;
-  responses: UserResponse[];
-  timestamp: string;
-}
 
 export default function Home() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedMethodIndex, setSelectedMethodIndex] = useState<number | null>(null);
   const [reasoning, setReasoning] = useState<string>('');
   const [userResponses, setUserResponses] = useState<UserResponse[]>([]);
-  const [showReviewScreen, setShowReviewScreen] = useState(false);
-  const [otherResponses, setOtherResponses] = useState<Submission[]>([]);
-  const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [showFixes, setShowFixes] = useState(false);
+  const [selectedFixIndex, setSelectedFixIndex] = useState<number | null>(null);
+  const [fixReasoning, setFixReasoning] = useState<string>('');
+  const [shuffledMethods, setShuffledMethods] = useState<ExperimentalMethod[]>([]);
+  const [shuffledFixes, setShuffledFixes] = useState<Array<{text: string, index: number}>>([]);
+  const [isClient, setIsClient] = useState(false);
   const questions: Question[] = data;
 
-  // Get shuffled experimental methods for current question (deterministic based on question index)
-  const getShuffledMethods = (questionIndex: number) => {
-    if (!questions[questionIndex]?.subElements) return [];
+  // Initialize shuffled methods only on client side to avoid hydration mismatch
+  useEffect(() => {
+    setIsClient(true);
+    const shuffleArray = (array: ExperimentalMethod[]) => {
+      const shuffled = [...array];
+      // Fisher-Yates shuffle algorithm
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    };
     
-    // Simple seeded random using question index
-    const seed = questionIndex * 9301 + 49297; // Simple linear congruential generator
-    const shuffled = [...questions[questionIndex].subElements];
-    
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const random = ((seed * (i + 1)) % 233280) / 233280; // Normalize to 0-1
-      const j = Math.floor(random * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    if (questions[currentQuestionIndex]?.subElements) {
+      setShuffledMethods(shuffleArray(questions[currentQuestionIndex].subElements));
     }
-    return shuffled;
-  };
+  }, [currentQuestionIndex, questions]);
 
-  const shuffledMethods = getShuffledMethods(currentQuestionIndex);
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentQuestionIndex]);
+
+  // Show loading state until client-side hydration is complete
+  if (!isClient) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        Loading...
+      </div>
+    );
+  }
 
   const handleNext = () => {
     if (selectedMethodIndex !== null) {
-      // Save current response
-      const response: UserResponse = {
+      // Keep the old response format for local state tracking
+      const userResponse: UserResponse = {
         questionIndex: currentQuestionIndex,
         selectedMethodIndex: selectedMethodIndex,
         reasoning: reasoning,
@@ -79,14 +90,72 @@ export default function Home() {
         question: questions[currentQuestionIndex]
       };
       
-      setUserResponses(prev => [...prev, response]);
+      setUserResponses(prev => [...prev, userResponse]);
     }
     
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setSelectedMethodIndex(null);
       setReasoning('');
+      setShowFixes(false);
+      setSelectedFixIndex(null);
+      setFixReasoning('');
     }
+  };
+
+  const handleContinue = () => {
+    setShowFixes(true);
+    
+    // Shuffle the fixes for the selected method
+    if (selectedMethodIndex !== null && shuffledMethods[selectedMethodIndex]) {
+      const method = shuffledMethods[selectedMethodIndex];
+      const fixes = [
+        { text: method.fix1, index: 0 },
+        { text: method.fix2, index: 1 },
+        { text: method.fix3, index: 2 },
+        { text: method.fix4, index: 3 }
+      ];
+      
+      // Fisher-Yates shuffle algorithm
+      const shuffled = [...fixes];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      
+      setShuffledFixes(shuffled);
+    }
+    
+    // Scroll to bottom after showing fixes
+    setTimeout(() => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }, 100);
+  };
+
+  const handleFixSelect = (fixIndex: number) => {
+    setSelectedFixIndex(fixIndex);
+    
+    // If correct selection, scroll to bottom after DOM updates
+    if (isCorrectFix(fixIndex)) {
+      setTimeout(() => {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      }, 100);
+    }
+  };
+
+  const handleRestart = () => {
+    // Reset all state to restart the application
+    setCurrentQuestionIndex(0);
+    setSelectedMethodIndex(null);
+    setReasoning('');
+    setUserResponses([]);
+    setLoading(false);
+    setShowFixes(false);
+    setSelectedFixIndex(null);
+    setFixReasoning('');
+    
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleBack = () => {
@@ -94,12 +163,26 @@ export default function Home() {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
       setSelectedMethodIndex(null);
       setReasoning('');
+      setShowFixes(false);
+      setSelectedFixIndex(null);
+      setFixReasoning('');
     }
   };
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentQuestionIndex]);
+  const isCorrectFix = (shuffledFixIndex: number) => {
+    if (!shuffledFixes[shuffledFixIndex] || !shuffledMethods[selectedMethodIndex!]) return false;
+    const method = shuffledMethods[selectedMethodIndex!];
+    const originalFixIndex = shuffledFixes[shuffledFixIndex].index;
+    
+    const correctness = [
+      method['fix1 correct'] === 'Y',
+      method['fix2 correct'] === 'Y', 
+      method['fix3 correct'] === 'Y',
+      method['fix4 correct'] === 'Y'
+    ];
+    
+    return correctness[originalFixIndex] || false;
+  };
 
   const handleMethodSelect = (methodIndex: number) => {
     setSelectedMethodIndex(methodIndex);
@@ -110,80 +193,21 @@ export default function Home() {
   };
 
   const isCorrectAnswer = (methodIndex: number) => {
-    if (!questions[currentQuestionIndex]?.subElements?.[methodIndex]) return false;
-    return questions[currentQuestionIndex].subElements[methodIndex].Correct === 'Y';
+    if (!shuffledMethods[methodIndex]) return false;
+    return shuffledMethods[methodIndex].Correct === 'Y';
   };
 
-  const handleReviewResponses = async () => {
-    try {
-      setLoading(true);
-      
-      // Save final response for last question if it exists
-      if (selectedMethodIndex !== null && currentQuestionIndex === questions.length - 1) {
-        const finalResponse: UserResponse = {
-          questionIndex: currentQuestionIndex,
-          selectedMethodIndex: selectedMethodIndex,
-          reasoning: reasoning,
-          isCorrect: isCorrectAnswer(selectedMethodIndex),
-          question: questions[currentQuestionIndex]
-        };
-        
-        const allResponses = [...userResponses, finalResponse];
-        
-        const response = await fetch('/api/submissions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            type: 'causalLevel',
-            responses: allResponses
-          }),
-        });
-        
-        if (response.ok) {
-          console.log('Responses saved successfully');
-        } else {
-          console.error('Failed to save responses');
-        }
-      }
-      
-      // Fetch last 15 responses
-      const fetchResponse = await fetch('/api/submissions');
-      if (fetchResponse.ok) {
-        const data = await fetchResponse.json();
-        setOtherResponses(data.submissions || []);
-      }
-      
-      setShowReviewScreen(true);
-      setLoading(false);
-      
-      // Scroll to top
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (error) {
-      console.error('Error saving responses:', error);
-      setLoading(false);
-    }
-  };
-
-  const handleStartOver = () => {
-    // Reset all state to initial values
-    setCurrentQuestionIndex(0);
-    setSelectedMethodIndex(null);
-    setReasoning('');
-    setUserResponses([]);
-    setShowReviewScreen(false);
-    setOtherResponses([]);
-    setActiveTab(0);
-    setLoading(false);
-    
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
 
   const getBackgroundColor = (methodIndex: number) => {
     if (selectedMethodIndex === methodIndex) {
       return isCorrectAnswer(methodIndex) ? '#e6ffe6' : '#ffe6e6';
+    }
+    return '#f9f9f9';
+  };
+
+  const getFixBackgroundColor = (fixIndex: number) => {
+    if (selectedFixIndex === fixIndex) {
+      return isCorrectFix(fixIndex) ? '#e6ffe6' : '#ffe6e6';
     }
     return '#f9f9f9';
   };
@@ -196,128 +220,6 @@ export default function Home() {
     );
   }
 
-  if (showReviewScreen) {
-    if (loading) {
-      return (
-        <div style={{ minHeight: '100vh', padding: '20px', backgroundColor: '#f0f0f0', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <div style={{ textAlign: 'center' }}>
-            <h2>Loading responses...</h2>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div style={{ minHeight: '100vh', padding: '20px', backgroundColor: '#f0f0f0' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <h1 style={{ textAlign: 'center', marginBottom: '30px' }}>Review Other Responses</h1>
-          
-          {/* Question Tabs */}
-          <div style={{ display: 'flex', marginBottom: '20px', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
-            {questions.map((_, index) => (
-              <button
-                key={index}
-                className="button"
-                onClick={() => setActiveTab(index)}
-                style={{
-                  padding: '10px 20px',
-                  fontSize: '14px',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  backgroundColor: activeTab === index ? '#6F00FF' : '#020202',
-                  color: 'white',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                STUDY {index + 1}
-              </button>
-            ))}
-          </div>
-
-          {/* Active Question Content */}
-          <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
-            <h2 style={{ marginBottom: '15px', color: '#333' }}>
-              {questions[activeTab]?.Example}
-            </h2>
-            <div style={{ marginBottom: '15px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '5px' }}>
-              <h3 style={{ marginBottom: '10px', color: '#666', fontSize: '16px' }}>Study Description:</h3>
-              <p style={{ margin: '0', lineHeight: '1.5' }}>{questions[activeTab]?.['Study Description']}</p>
-            </div>
-            <div style={{ marginBottom: '15px', padding: '15px', backgroundColor: '#e8f5e8', borderRadius: '5px', border: '1px solid #28a745' }}>
-              <p style={{ margin: '0', lineHeight: '1.5', color: '#28a745' }}>
-                <strong>Correct Experimental Methods:</strong>
-              </p>
-              {questions[activeTab]?.subElements?.filter(method => method.Correct === 'Y').map((method, index) => (
-                <p key={index} style={{ margin: '5px 0', lineHeight: '1.5', color: '#28a745' }}>
-                  • {method['Experimental Methods']}
-                </p>
-              ))}
-            </div>
-          </div>
-
-          {/* Other Responses */}
-          <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-            <h3 style={{ marginBottom: '20px', color: '#333', textAlign: 'center' }}>Other Reasonings for Study: {questions[activeTab]?.Example}</h3>
-            <div style={{ 
-              maxHeight: '264px', 
-              overflowY: 'auto', 
-              border: '1px solid #dee2e6', 
-              borderRadius: '5px',
-              padding: '10px',
-              backgroundColor: '#fafafa'
-            }}>
-              <div style={{ display: 'grid', gap: '15px' }}>
-                {otherResponses.length > 0 ? (
-                  otherResponses
-                    .map((submission, submissionIndex) => {
-                      const responseForCurrentQuestion = submission.responses?.find(r => r.questionIndex === activeTab);
-                      if (!responseForCurrentQuestion) return null;
-                      
-                      return (
-                        <div key={submissionIndex} style={{ 
-                          padding: '15px', 
-                          border: '1px solid #dee2e6', 
-                          borderRadius: '5px',
-                          backgroundColor: '#ffffff',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                        }}>
-                          <p style={{ margin: '0', fontStyle: 'italic', color: '#666', lineHeight: '1.5' }}>
-                            {responseForCurrentQuestion.reasoning}
-                          </p>
-                        </div>
-                      );
-                    })
-                    .filter(Boolean)
-                ) : (
-                  <p style={{ textAlign: 'center', color: '#666', fontStyle: 'italic' }}>
-                    No other reasoning available for this study.
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          {/* Start Over Button */}
-          <div style={{ textAlign: 'center', marginTop: '30px' }}>
-            <button 
-              className="button"
-              onClick={handleStartOver}
-              style={{
-                padding: '12px 24px',
-                fontSize: '16px',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: 'pointer'
-              }}
-            >
-              START OVER
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const currentQuestion = questions[currentQuestionIndex];
 
@@ -341,7 +243,7 @@ export default function Home() {
       <div style={{ marginBottom: '30px' }}>
         <h2>Experimental Methods</h2>
         <div style={{ display: 'flex', border: '1px solid #ccc', padding: '15px', flexDirection: 'column', backgroundColor: 'white' }}>
-          <h3 style={{ margin: '0 0 15px 0', textAlign: 'center' }}>Select which Experimental Methods is correct:</h3>
+          <h3 style={{ margin: '0 0 15px 0', textAlign: 'center' }}>Select which Experimental Method is correct:</h3>
           
           {shuffledMethods.map((method, index) => (
             <div 
@@ -351,21 +253,22 @@ export default function Home() {
                 border: '1px solid #ddd', 
                 padding: '10px', 
                 marginBottom: index === shuffledMethods.length - 1 ? '0' : '10px', 
-                cursor: 'pointer',
+                cursor: showFixes ? 'not-allowed' : 'pointer',
                 backgroundColor: getBackgroundColor(index),
-                transition: 'background-color 0.2s ease'
+                transition: 'background-color 0.2s ease',
+                opacity: showFixes ? 0.6 : 1
               }}
               onMouseEnter={(e) => {
-                if (selectedMethodIndex !== index) {
+                if (selectedMethodIndex !== index && !showFixes) {
                   e.currentTarget.style.backgroundColor = '#e0e0e0';
                 }
               }}
               onMouseLeave={(e) => {
-                if (selectedMethodIndex !== index) {
+                if (selectedMethodIndex !== index && !showFixes) {
                   e.currentTarget.style.backgroundColor = getBackgroundColor(index);
                 }
               }}
-              onClick={() => handleMethodSelect(index)}
+              onClick={() => !showFixes && handleMethodSelect(index)}
             >
               <p style={{ textAlign: 'left', lineHeight: '1.6', margin: '0', flex: '1', width: '100%', textWrap: 'wrap' }}>
                 {method['Experimental Methods']}
@@ -385,8 +288,9 @@ export default function Home() {
               <h4 style={{ margin: '0 0 10px 0', textAlign: 'left' }}>Explain your reasoning:</h4>
               <textarea
                 value={reasoning}
-                onChange={(e) => setReasoning(e.target.value)}
+                onChange={(e) => !showFixes && setReasoning(e.target.value)}
                 placeholder="Please explain why you selected this answer (minimum 10 characters)..."
+                disabled={showFixes}
                 style={{
                   width: '100%',
                   minHeight: '100px',
@@ -396,7 +300,9 @@ export default function Home() {
                   fontSize: '14px',
                   lineHeight: '1.4',
                   resize: 'vertical',
-                  fontFamily: 'inherit'
+                  fontFamily: 'inherit',
+                  opacity: showFixes ? 0.6 : 1,
+                  cursor: showFixes ? 'not-allowed' : 'text'
                 }}
               />
             </div>
@@ -404,6 +310,77 @@ export default function Home() {
         </div>
       </div>
 
+      {showFixes && selectedMethodIndex !== null && (
+        <div style={{ marginBottom: '30px' }}>
+          <h2>How would you modify this step?</h2>
+          <div style={{ display: 'flex', border: '1px solid #ccc', padding: '15px', flexDirection: 'column', backgroundColor: 'white' }}>
+            <h3 style={{ margin: '0 0 15px 0', textAlign: 'center' }}>Select which Modification is correct:</h3>
+            
+            {shuffledFixes.length > 0 && (
+              <>
+                {shuffledFixes.map((fix, index) => (
+                  <div 
+                    key={index}
+                    style={{ 
+                      display: 'flex', 
+                      border: '1px solid #ddd', 
+                      padding: '10px', 
+                      marginBottom: index === shuffledFixes.length - 1 ? '0' : '10px', 
+                      cursor: 'pointer',
+                      backgroundColor: getFixBackgroundColor(index),
+                      transition: 'background-color 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selectedFixIndex !== index) {
+                        e.currentTarget.style.backgroundColor = '#e0e0e0';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedFixIndex !== index) {
+                        e.currentTarget.style.backgroundColor = getFixBackgroundColor(index);
+                      }
+                    }}
+                    onClick={() => handleFixSelect(index)}
+                  >
+                    <p style={{ textAlign: 'left', lineHeight: '1.6', margin: '0', flex: '1', width: '100%', textWrap: 'wrap' }}>
+                      {fix.text}
+                    </p>
+                  </div>
+                ))}
+
+                {selectedFixIndex !== null && isCorrectFix(selectedFixIndex) && (
+                  <div style={{ 
+                    display: 'flex', 
+                    border: '1px solid #ddd', 
+                    padding: '15px', 
+                    marginTop: '15px', 
+                    flexDirection: 'column', 
+                    backgroundColor: '#f9f9f9' 
+                  }}>
+                    <h4 style={{ margin: '0 0 10px 0', textAlign: 'left' }}>Explain your reasoning:</h4>
+                    <textarea
+                      value={fixReasoning}
+                      onChange={(e) => setFixReasoning(e.target.value)}
+                      placeholder="Please explain why you selected this modification (minimum 10 characters)..."
+                      style={{
+                        width: '100%',
+                        minHeight: '100px',
+                        padding: '10px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        fontSize: '14px',
+                        lineHeight: '1.4',
+                        resize: 'vertical',
+                        fontFamily: 'inherit'
+                      }}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <div style={{ textAlign: 'center', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px' }}>
         {currentQuestionIndex > 0 && (
@@ -418,14 +395,14 @@ export default function Home() {
               cursor: 'pointer'
             }}
           >
-            BACK
+            PREVIOUS STUDY
           </button>
         )}
 
-        {currentQuestionIndex < questions.length - 1 ? (
+        {!showFixes ? (
           <button 
             className="button"
-            onClick={handleNext}
+            onClick={handleContinue}
             disabled={selectedMethodIndex === null || !isCorrectAnswer(selectedMethodIndex) || reasoning.length < 10}
             style={{
               padding: '10px 20px',
@@ -436,24 +413,42 @@ export default function Home() {
               opacity: selectedMethodIndex !== null && isCorrectAnswer(selectedMethodIndex) && reasoning.length >= 10 ? 1 : 0.5
             }}
           >
-            NEXT
+            CONTINUE
           </button>
         ) : (
-          <button 
-            className="button"
-            onClick={handleReviewResponses}
-            disabled={selectedMethodIndex === null || !isCorrectAnswer(selectedMethodIndex) || reasoning.length < 10}
-            style={{
-              padding: '10px 20px',
-              fontSize: '16px',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: selectedMethodIndex !== null && isCorrectAnswer(selectedMethodIndex) && reasoning.length >= 10 ? 'pointer' : 'not-allowed',
-              opacity: selectedMethodIndex !== null && isCorrectAnswer(selectedMethodIndex) && reasoning.length >= 10 ? 1 : 0.5
-            }}
-          >
-            REVIEW RESPONSES
-          </button>
+          currentQuestionIndex < questions.length - 1 ? (
+            <button 
+              className="button"
+              onClick={handleNext}
+              disabled={!showFixes || selectedFixIndex === null || !isCorrectFix(selectedFixIndex) || fixReasoning.length < 10}
+              style={{
+                padding: '10px 20px',
+                fontSize: '16px',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: showFixes && selectedFixIndex !== null && isCorrectFix(selectedFixIndex) && fixReasoning.length >= 10 ? 'pointer' : 'not-allowed',
+                opacity: showFixes && selectedFixIndex !== null && isCorrectFix(selectedFixIndex) && fixReasoning.length >= 10 ? 1 : 0.5
+              }}
+            >
+              NEXT STUDY
+            </button>
+          ) : (
+            <button 
+              className="button"
+              onClick={handleRestart}
+              disabled={!showFixes || selectedFixIndex === null || !isCorrectFix(selectedFixIndex) || fixReasoning.length < 10}
+              style={{
+                padding: '10px 20px',
+                fontSize: '16px',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: showFixes && selectedFixIndex !== null && isCorrectFix(selectedFixIndex) && fixReasoning.length >= 10 ? 'pointer' : 'not-allowed',
+                opacity: showFixes && selectedFixIndex !== null && isCorrectFix(selectedFixIndex) && fixReasoning.length >= 10 ? 1 : 0.5
+              }}
+            >
+              RESTART ACTIVITY
+            </button>
+          )
         )}
       </div>
     </div>
