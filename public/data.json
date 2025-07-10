@@ -1,0 +1,32 @@
+[
+  {
+    "Question": "1",
+    "Example": "Dopamine Transporter Binding and Gait Freezing in Parkinson's Disease",
+    "Study Description": "This study aims to examine the relationship between dopamine transporter availability and gait freezing severity in Parkinson's disease, as dopamine-targeted interventions are hypothesized as a possible treatment to reduce freezing episodes.",
+    "Methodology1": "Researchers recruit 85 patients with Parkinson's disease from a movement disorders clinic. All participants undergo brain imaging to measure dopamine transporter (DAT) binding in the brain's movement control regions. DAT binding is quantified as a ratio, with higher values indicating greater dopamine transporter availability.",
+    "Methodology2": "Gait freezing is assessed using the Freezing of Gait Questionnaire (FOG-Q), a 6-item scale where patients report frequency and duration of freezing episodes during walking. Scores range from 0-24, with higher scores indicating more severe freezing symptoms.",
+    "Results1": "Mean DAT binding is 1.2 ± 0.4. FOG-Q scores range from 0-19 (mean 8.3 ± 5.2).",
+    "Results2": "DAT binding shows a significant negative correlation with FOG-Q scores (r = -0.47, p < 0.001). Patients with low DAT binding (below 1.0) have significantly higher FOG-Q scores compared to those with high DAT binding (above 1.5), with a mean difference of 6.2 points (95% CI: 3.8-8.6, p < 0.001).",
+    "Level of Explanation": "Correlational"
+  },
+  {
+    "Question": "2",
+    "Example": "EEG Pattern Analysis for Seizure Prediction in Epilepsy Patients",
+    "Study Description": "This study aims to develop and validate a machine learning model that can predict seizure onset in epilepsy patients using pre-ictal EEG patterns.",
+    "Methodology1": "Researchers recruited 200 patients with drug-resistant epilepsy from three comprehensive epilepsy centers; 150 patients are randomly assigned to the training dataset and 50 patients are reserved for validation testing. Continuous scalp EEG monitoring was conducted using 32-channel systems over a 6-month period for all participants, with patients maintaining detailed seizure diaries.",
+    "Methodology2": "The research team extracted EEG features during pre-ictal periods (5-30 minutes before seizure onset). A machine learning model was trained to recognize patterns that consistently preceded seizures, using data from 1,247 recorded seizures from the 150 training patients. The model was designed to distinguish between pre-ictal states (preceding seizures) and interictal states (baseline periods between seizures). The final trained model was then tested on the validation cohort of 50 patients.",
+    "Results1": "During the 6-month training period, the system recorded 1,247 seizures across the 150 training patients.",
+    "Results2": "When tested on the independent validation patients, the algorithm successfully predicted 321 out of 412 seizures (78.2%) with advance warning times averaging 7.3 minutes (range: 5-12 minutes). The false positive rate was 1.2 alarms per hour of monitoring.",
+    "Level of Explanation": "Predictive"
+  },
+  {
+    "Question": "3",
+    "Example": "Omega-3 Fatty Acid Supplementation and Spatial Learning in Mice",
+    "Study Description": "This study investigates whether dietary omega-3 fatty acid supplementation causes improvements in spatial learning and memory performance in laboratory mice.",
+    "Methodology1": "Researchers obtained 120 healthy adult mice (8 weeks old) from a commercial breeding facility. Mice were randomly assigned to either an omega-3 supplemented diet group or a control diet group. The supplemented diet contained 2% fish oil providing EPA and DHA omega-3 fatty acids, while the control diet contained equivalent calories from corn oil.",
+    "Methodology2": "After 6 weeks of dietary intervention, all mice underwent behavioral testing using the Morris water maze, a standard test of spatial learning and memory. Testing occurred over 5 consecutive days, with 4 trials per day. Learning was assessed by measuring the time taken to find the hidden platform (escape latency). Memory was tested on day 6 with the platform removed, measuring time spent in the target quadrant where the platform had been located.",
+    "Results1": "During the 6-week dietary intervention period, both groups showed normal weight gain with no significant differences in body weight or food consumption.",
+    "Results2": "Both groups showed similar performance in the water maze across the 5-day testing period. By day 4 of testing, the omega-3 group had an average escape latency of 28.4 seconds compared to 31.2 seconds for the control group (p = 0.34). On the memory test, omega-3 supplemented mice spent 47% of their time in the target quadrant compared to 45% for control mice (p = 0.68), again showing no difference between groups.",
+    "Level of Explanation": "Causal"
+  }
+]
