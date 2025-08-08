@@ -31,14 +31,14 @@ export default function RootLayout({
             onClick={handleResetClick}
             title="Reset Application"
           >
-            <Image
+             <Image
               src="/favicon.ico"
               alt="Logo - Reset"
               width={40}
               height={40}
               className="favicon" // Favicon class
               priority
-            />
+            /> 
           </button>
           <div className="title-container"> {/* Title container class */}
             <h1 className="title">Evaluate this experiment</h1> {/* Title class */}

@@ -1,12 +1,13 @@
 [
   {
     "Example": "Stress <-> Memory",
-    "Study Description": "This experiment tests whether acute stress impairs memory consolidation. The proposed causal pathway is that stress exposure triggers cortisol release, which activates glucocorticoid receptors in the hippocampus and ultimately impairs memory consolidation.",
+    "Study Description": "This experiment tests whether acute stress impairs memory consolidation.",
+    "Causal Pathway": "Stress exposure triggers cortisol release, which activates glucocorticoid receptors in the hippocampus and ultimately impairs memory consolidation",
     "Independent Variable": "Acute stress exposure (TSST vs. control condition)",
     "Dependent Variable": "Memory performance (percentage of word pairs correctly recalled)",
     "subElements": [
       {
-        "Experimental Methods": "Participants are fitted with galvanic skin response (GSR) electrodes and study a list of 16 semantically related word pairs for 5 minutes (encoding phase)",
+        "Experimental Methods": "Participants study a list of 16 semantically related word pairs for 5 minutes (encoding phase)",
         "Correct": "N",
         "correctness of methods selection": "Incorrect - please try again",
         "fix1": "NA",
@@ -32,17 +33,17 @@
         "fix4 correct": "N"
       },
       {
-        "Experimental Methods": "GSR data is recorded continuously during the intervention to verify stress induction",
+        "Experimental Methods": "Participants fill out a self-questionnaire to measure their stress levels",
         "Correct": "Y",
-        "correctness of methods selection": "Correct - GSR is an indicator of stress, but it is a direct measure of the hypothesized mediators.",
+        "correctness of methods selection": "Correct - a more direct measure of stress can be implemented.",
         "fix1": "Collect saliva samples to measure cortisol levels",
         "fix1 correct": "Y",
         "fix2": "Use EEG to monitor stress-related brain activity",
         "fix2 correct": "N",
         "fix3": "Measure blood pressure changes to measure stress levels",
         "fix3 correct": "N",
-        "fix4": "Use stress questionnaires before and after the stressor",
-        "fix4 correct": "N"
+        "fix4": "Collect galvanic skin response data during the intervention to verify stress induction",
+        "fix4 correct": "Y"
       },
       {
         "Experimental Methods": "Participants complete a 15-minute distractor task (sudoku puzzles)",
@@ -74,7 +75,8 @@
   },
   {
     "Example": "Caffeine <-> Cognitive performance",
-    "Study Description": "This experiment tests whether caffeine improves cognitive performance. The proposed causal pathway is that caffeine blocks adenosine receptors, which normally promote a feeling of sleepiness. This blockage improves alertness, leading to improved cognitive performance.",
+    "Study Description": "This experiment tests whether caffeine improves cognitive performance.",
+    "Causal Pathway": "Caffeine blocks adenosine receptors, which normally promote a feeling of sleepiness. This blockage improves alertness, leading to improved cognitive performance.",
     "Independent Variable": "Caffeine",
     "Dependent Variable": "Cognitive performance",
     "subElements": [
@@ -120,7 +122,7 @@
       {
         "Experimental Methods": "Average reflex time and total number of correct arithmetic problems are calculated as measures of cognitive performance.",
         "Correct": "Y",
-        "correctness of methods selection": "Correct - these measures a",
+        "correctness of methods selection": "Correct - these measures are a limited set of factors that are typically considered cognitive performance.",
         "fix1": "Use a comprehensive set of tests that include working memory, attention, and executive function tasks.",
         "fix1 correct": "Y",
         "fix2": "Use both visual and auditory stimuli to test reflexes",
