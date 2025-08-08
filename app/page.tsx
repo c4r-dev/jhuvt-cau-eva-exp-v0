@@ -20,6 +20,7 @@ interface ExperimentalMethod {
 interface Question {
   Example: string;
   'Study Description': string;
+  'Causal Pathway': string;
   'Independent Variable': string;
   'Dependent Variable': string;
   subElements: ExperimentalMethod[];
