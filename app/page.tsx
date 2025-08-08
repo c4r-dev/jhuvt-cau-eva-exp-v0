@@ -43,28 +43,13 @@ export default function Home() {
   const [showFixes, setShowFixes] = useState(false);
   const [selectedFixIndex, setSelectedFixIndex] = useState<number | null>(null);
   const [fixReasoning, setFixReasoning] = useState<string>('');
-  const [shuffledMethods, setShuffledMethods] = useState<ExperimentalMethod[]>([]);
-  const [shuffledFixes, setShuffledFixes] = useState<Array<{text: string, index: number}>>([]);
   const [isClient, setIsClient] = useState(false);
   const questions: Question[] = data;
 
-  // Initialize shuffled methods only on client side to avoid hydration mismatch
+  // Initialize client side to avoid hydration mismatch
   useEffect(() => {
     setIsClient(true);
-    const shuffleArray = (array: ExperimentalMethod[]) => {
-      const shuffled = [...array];
-      // Fisher-Yates shuffle algorithm
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      return shuffled;
-    };
-    
-    if (questions[currentQuestionIndex]?.subElements) {
-      setShuffledMethods(shuffleArray(questions[currentQuestionIndex].subElements));
-    }
-  }, [currentQuestionIndex, questions]);
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -105,26 +90,6 @@ export default function Home() {
 
   const handleContinue = () => {
     setShowFixes(true);
-    
-    // Shuffle the fixes for the selected method
-    if (selectedMethodIndex !== null && shuffledMethods[selectedMethodIndex]) {
-      const method = shuffledMethods[selectedMethodIndex];
-      const fixes = [
-        { text: method.fix1, index: 0 },
-        { text: method.fix2, index: 1 },
-        { text: method.fix3, index: 2 },
-        { text: method.fix4, index: 3 }
-      ];
-      
-      // Fisher-Yates shuffle algorithm
-      const shuffled = [...fixes];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      
-      setShuffledFixes(shuffled);
-    }
     
     // Scroll to bottom after showing fixes
     setTimeout(() => {
@@ -169,10 +134,9 @@ export default function Home() {
     }
   };
 
-  const isCorrectFix = (shuffledFixIndex: number) => {
-    if (!shuffledFixes[shuffledFixIndex] || !shuffledMethods[selectedMethodIndex!]) return false;
-    const method = shuffledMethods[selectedMethodIndex!];
-    const originalFixIndex = shuffledFixes[shuffledFixIndex].index;
+  const isCorrectFix = (fixIndex: number) => {
+    if (selectedMethodIndex === null) return false;
+    const method = questions[currentQuestionIndex].subElements[selectedMethodIndex];
     
     const correctness = [
       method['fix1 correct'] === 'Y',
@@ -181,7 +145,7 @@ export default function Home() {
       method['fix4 correct'] === 'Y'
     ];
     
-    return correctness[originalFixIndex] || false;
+    return correctness[fixIndex] || false;
   };
 
   const handleMethodSelect = (methodIndex: number) => {
@@ -193,23 +157,43 @@ export default function Home() {
   };
 
   const isCorrectAnswer = (methodIndex: number) => {
-    if (!shuffledMethods[methodIndex]) return false;
-    return shuffledMethods[methodIndex].Correct === 'Y';
+    if (!questions[currentQuestionIndex]?.subElements[methodIndex]) return false;
+    return questions[currentQuestionIndex].subElements[methodIndex].Correct === 'Y';
   };
 
 
-  const getBackgroundColor = (methodIndex: number) => {
+  const getMethodStyle = (methodIndex: number) => {
     if (selectedMethodIndex === methodIndex) {
-      return isCorrectAnswer(methodIndex) ? '#e6ffe6' : '#ffe6e6';
+      return {
+        backgroundColor: isCorrectAnswer(methodIndex) ? '#f0fdf4' : '#fef2f2',
+        border: isCorrectAnswer(methodIndex) ? '3px solid #22c55e' : '3px solid #ef4444',
+        boxShadow: isCorrectAnswer(methodIndex) ? '0 4px 12px rgba(34, 197, 94, 0.2)' : '0 4px 12px rgba(239, 68, 68, 0.2)',
+        transform: 'scale(1.02)'
+      };
     }
-    return '#f9f9f9';
+    return {
+      backgroundColor: '#f9f9f9',
+      border: '1px solid #ddd',
+      boxShadow: 'none',
+      transform: 'scale(1)'
+    };
   };
 
-  const getFixBackgroundColor = (fixIndex: number) => {
+  const getFixStyle = (fixIndex: number) => {
     if (selectedFixIndex === fixIndex) {
-      return isCorrectFix(fixIndex) ? '#e6ffe6' : '#ffe6e6';
+      return {
+        backgroundColor: isCorrectFix(fixIndex) ? '#f0fdf4' : '#fef2f2',
+        border: isCorrectFix(fixIndex) ? '3px solid #22c55e' : '3px solid #ef4444',
+        boxShadow: isCorrectFix(fixIndex) ? '0 4px 12px rgba(34, 197, 94, 0.2)' : '0 4px 12px rgba(239, 68, 68, 0.2)',
+        transform: 'scale(1.02)'
+      };
     }
-    return '#f9f9f9';
+    return {
+      backgroundColor: '#f9f9f9',
+      border: '1px solid #ddd',
+      boxShadow: 'none',
+      transform: 'scale(1)'
+    };
   };
 
   if (questions.length === 0) {
@@ -234,6 +218,7 @@ export default function Home() {
         <div style={{ display: 'flex', border: '1px solid #ccc', padding: '10px', backgroundColor: 'white' }}>
           <div style={{ flex: '1', width: '100%' }}>
             <p style={{ textAlign: 'left', lineHeight: '1.6', margin: '0 0 10px 0', textWrap: 'wrap' }}>{currentQuestion['Study Description']}</p>
+            <p style={{ textAlign: 'left', lineHeight: '1.6', margin: '0 0 10px 0', textWrap: 'wrap' }}><strong>Causal Pathway:</strong> {currentQuestion['Causal Pathway']}</p>
             <p style={{ textAlign: 'left', lineHeight: '1.6', margin: '0 0 10px 0', textWrap: 'wrap' }}><strong>Independent Variable:</strong> {currentQuestion['Independent Variable']}</p>
             <p style={{ textAlign: 'left', lineHeight: '1.6', margin: '0', textWrap: 'wrap' }}><strong>Dependent Variable:</strong> {currentQuestion['Dependent Variable']}</p>
           </div>
@@ -243,29 +228,34 @@ export default function Home() {
       <div style={{ marginBottom: '30px' }}>
         <h2>Experimental Methods</h2>
         <div style={{ display: 'flex', border: '1px solid #ccc', padding: '15px', flexDirection: 'column', backgroundColor: 'white' }}>
-          <h3 style={{ margin: '0 0 15px 0', textAlign: 'center' }}>Select which Experimental Method is correct:</h3>
+          <h3 style={{ margin: '0 0 15px 0', textAlign: 'center' }}>Select a step of the methods that can be improved:</h3>
           
-          {shuffledMethods.map((method, index) => (
+          {questions[currentQuestionIndex].subElements.map((method, index) => (
             <div 
               key={index}
               style={{ 
                 display: 'flex', 
-                border: '1px solid #ddd', 
-                padding: '10px', 
-                marginBottom: index === shuffledMethods.length - 1 ? '0' : '10px', 
+                padding: '12px', 
+                marginBottom: index === questions[currentQuestionIndex].subElements.length - 1 ? '0' : '12px', 
                 cursor: showFixes ? 'not-allowed' : 'pointer',
-                backgroundColor: getBackgroundColor(index),
-                transition: 'background-color 0.2s ease',
-                opacity: showFixes ? 0.6 : 1
+                borderRadius: '8px',
+                transition: 'all 0.3s ease',
+                opacity: showFixes ? 0.6 : 1,
+                ...getMethodStyle(index)
               }}
               onMouseEnter={(e) => {
                 if (selectedMethodIndex !== index && !showFixes) {
-                  e.currentTarget.style.backgroundColor = '#e0e0e0';
+                  e.currentTarget.style.backgroundColor = '#e8f5e8';
+                  e.currentTarget.style.transform = 'scale(1.01)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (selectedMethodIndex !== index && !showFixes) {
-                  e.currentTarget.style.backgroundColor = getBackgroundColor(index);
+                  const baseStyle = getMethodStyle(index);
+                  e.currentTarget.style.backgroundColor = baseStyle.backgroundColor;
+                  e.currentTarget.style.transform = baseStyle.transform;
+                  e.currentTarget.style.boxShadow = baseStyle.boxShadow;
                 }
               }}
               onClick={() => !showFixes && handleMethodSelect(index)}
@@ -276,37 +266,63 @@ export default function Home() {
             </div>
           ))}
 
-          {selectedMethodIndex !== null && isCorrectAnswer(selectedMethodIndex) && (
+          {selectedMethodIndex !== null && (
             <div style={{ 
               display: 'flex', 
-              border: '1px solid #ddd', 
-              padding: '15px', 
-              marginTop: '15px', 
+              border: isCorrectAnswer(selectedMethodIndex) ? '2px solid #22c55e' : '2px solid #ef4444',
+              borderRadius: '12px',
+              padding: '20px', 
+              marginTop: '20px', 
               flexDirection: 'column', 
-              backgroundColor: '#f9f9f9' 
+              backgroundColor: isCorrectAnswer(selectedMethodIndex) ? 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)' : 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+              boxShadow: isCorrectAnswer(selectedMethodIndex) ? '0 4px 12px rgba(34, 197, 94, 0.15)' : '0 4px 12px rgba(239, 68, 68, 0.15)',
+              background: isCorrectAnswer(selectedMethodIndex) ? 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)' : 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)'
             }}>
-              <h4 style={{ margin: '0 0 10px 0', textAlign: 'left' }}>Explain your reasoning:</h4>
-              <textarea
-                value={reasoning}
-                onChange={(e) => !showFixes && setReasoning(e.target.value)}
-                placeholder="Please explain why you selected this answer (minimum 10 characters)..."
-                disabled={showFixes}
-                style={{
-                  width: '100%',
-                  minHeight: '100px',
-                  padding: '10px',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  backgroundColor: isCorrectAnswer(selectedMethodIndex) ? '#22c55e' : '#ef4444',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: '12px',
                   fontSize: '14px',
-                  lineHeight: '1.4',
-                  resize: 'vertical',
-                  fontFamily: 'inherit',
-                  opacity: showFixes ? 0.6 : 1,
-                  cursor: showFixes ? 'not-allowed' : 'text'
-                }}
-              />
+                  fontWeight: 'bold',
+                  color: 'white'
+                }}>
+                  {isCorrectAnswer(selectedMethodIndex) ? '✓' : '✗'}
+                </div>
+                <h4 style={{ 
+                  margin: '0', 
+                  textAlign: 'left', 
+                  color: isCorrectAnswer(selectedMethodIndex) ? '#15803d' : '#dc2626',
+                  fontSize: '16px',
+                  fontWeight: '600'
+                }}>
+                  {isCorrectAnswer(selectedMethodIndex) ? 'Correct!' : 'Incorrect'}
+                </h4>
+              </div>
+              <div style={{
+                padding: '16px',
+                backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                borderRadius: '8px',
+                border: `1px solid ${isCorrectAnswer(selectedMethodIndex) ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
+              }}>
+                <p style={{ 
+                  margin: '0', 
+                  textAlign: 'left', 
+                  lineHeight: '1.6',
+                  color: '#374151',
+                  fontSize: '14px'
+                }}>
+                  {questions[currentQuestionIndex].subElements[selectedMethodIndex]['correctness of methods selection']}
+                </p>
+              </div>
             </div>
           )}
+
         </div>
       </div>
 
@@ -314,68 +330,50 @@ export default function Home() {
         <div style={{ marginBottom: '30px' }}>
           <h2>How would you modify this step?</h2>
           <div style={{ display: 'flex', border: '1px solid #ccc', padding: '15px', flexDirection: 'column', backgroundColor: 'white' }}>
-            <h3 style={{ margin: '0 0 15px 0', textAlign: 'center' }}>Select which Modification is correct:</h3>
+            <h3 style={{ margin: '0 0 15px 0', textAlign: 'center' }}>Select an appropriate modification to the chosen method to make it a more direct test of the causal pathway:</h3>
             
-            {shuffledFixes.length > 0 && (
+            {selectedMethodIndex !== null && (
               <>
-                {shuffledFixes.map((fix, index) => (
+                {[
+                  questions[currentQuestionIndex].subElements[selectedMethodIndex].fix1,
+                  questions[currentQuestionIndex].subElements[selectedMethodIndex].fix2,
+                  questions[currentQuestionIndex].subElements[selectedMethodIndex].fix3,
+                  questions[currentQuestionIndex].subElements[selectedMethodIndex].fix4
+                ].map((fix, index) => (
                   <div 
                     key={index}
                     style={{ 
                       display: 'flex', 
-                      border: '1px solid #ddd', 
-                      padding: '10px', 
-                      marginBottom: index === shuffledFixes.length - 1 ? '0' : '10px', 
+                      padding: '12px', 
+                      marginBottom: index === 3 ? '0' : '12px', 
                       cursor: 'pointer',
-                      backgroundColor: getFixBackgroundColor(index),
-                      transition: 'background-color 0.2s ease'
+                      borderRadius: '8px',
+                      transition: 'all 0.3s ease',
+                      ...getFixStyle(index)
                     }}
                     onMouseEnter={(e) => {
                       if (selectedFixIndex !== index) {
-                        e.currentTarget.style.backgroundColor = '#e0e0e0';
+                        e.currentTarget.style.backgroundColor = '#e8f5e8';
+                        e.currentTarget.style.transform = 'scale(1.01)';
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (selectedFixIndex !== index) {
-                        e.currentTarget.style.backgroundColor = getFixBackgroundColor(index);
+                        const baseStyle = getFixStyle(index);
+                        e.currentTarget.style.backgroundColor = baseStyle.backgroundColor;
+                        e.currentTarget.style.transform = baseStyle.transform;
+                        e.currentTarget.style.boxShadow = baseStyle.boxShadow;
                       }
                     }}
                     onClick={() => handleFixSelect(index)}
                   >
                     <p style={{ textAlign: 'left', lineHeight: '1.6', margin: '0', flex: '1', width: '100%', textWrap: 'wrap' }}>
-                      {fix.text}
+                      {fix}
                     </p>
                   </div>
                 ))}
 
-                {selectedFixIndex !== null && isCorrectFix(selectedFixIndex) && (
-                  <div style={{ 
-                    display: 'flex', 
-                    border: '1px solid #ddd', 
-                    padding: '15px', 
-                    marginTop: '15px', 
-                    flexDirection: 'column', 
-                    backgroundColor: '#f9f9f9' 
-                  }}>
-                    <h4 style={{ margin: '0 0 10px 0', textAlign: 'left' }}>Explain your reasoning:</h4>
-                    <textarea
-                      value={fixReasoning}
-                      onChange={(e) => setFixReasoning(e.target.value)}
-                      placeholder="Please explain why you selected this modification (minimum 10 characters)..."
-                      style={{
-                        width: '100%',
-                        minHeight: '100px',
-                        padding: '10px',
-                        border: '1px solid #ccc',
-                        borderRadius: '4px',
-                        fontSize: '14px',
-                        lineHeight: '1.4',
-                        resize: 'vertical',
-                        fontFamily: 'inherit'
-                      }}
-                    />
-                  </div>
-                )}
               </>
             )}
           </div>
@@ -403,14 +401,14 @@ export default function Home() {
           <button 
             className="button"
             onClick={handleContinue}
-            disabled={selectedMethodIndex === null || !isCorrectAnswer(selectedMethodIndex) || reasoning.length < 10}
+            disabled={selectedMethodIndex === null || !isCorrectAnswer(selectedMethodIndex)}
             style={{
               padding: '10px 20px',
               fontSize: '16px',
               border: 'none',
               borderRadius: '5px',
-              cursor: selectedMethodIndex !== null && isCorrectAnswer(selectedMethodIndex) && reasoning.length >= 10 ? 'pointer' : 'not-allowed',
-              opacity: selectedMethodIndex !== null && isCorrectAnswer(selectedMethodIndex) && reasoning.length >= 10 ? 1 : 0.5
+              cursor: selectedMethodIndex !== null && isCorrectAnswer(selectedMethodIndex) ? 'pointer' : 'not-allowed',
+              opacity: selectedMethodIndex !== null && isCorrectAnswer(selectedMethodIndex) ? 1 : 0.5
             }}
           >
             CONTINUE
@@ -420,14 +418,14 @@ export default function Home() {
             <button 
               className="button"
               onClick={handleNext}
-              disabled={!showFixes || selectedFixIndex === null || !isCorrectFix(selectedFixIndex) || fixReasoning.length < 10}
+              disabled={!showFixes || selectedFixIndex === null || !isCorrectFix(selectedFixIndex)}
               style={{
                 padding: '10px 20px',
                 fontSize: '16px',
                 border: 'none',
                 borderRadius: '5px',
-                cursor: showFixes && selectedFixIndex !== null && isCorrectFix(selectedFixIndex) && fixReasoning.length >= 10 ? 'pointer' : 'not-allowed',
-                opacity: showFixes && selectedFixIndex !== null && isCorrectFix(selectedFixIndex) && fixReasoning.length >= 10 ? 1 : 0.5
+                cursor: showFixes && selectedFixIndex !== null && isCorrectFix(selectedFixIndex) ? 'pointer' : 'not-allowed',
+                opacity: showFixes && selectedFixIndex !== null && isCorrectFix(selectedFixIndex) ? 1 : 0.5
               }}
             >
               NEXT STUDY
@@ -436,14 +434,14 @@ export default function Home() {
             <button 
               className="button"
               onClick={handleRestart}
-              disabled={!showFixes || selectedFixIndex === null || !isCorrectFix(selectedFixIndex) || fixReasoning.length < 10}
+              disabled={!showFixes || selectedFixIndex === null || !isCorrectFix(selectedFixIndex)}
               style={{
                 padding: '10px 20px',
                 fontSize: '16px',
                 border: 'none',
                 borderRadius: '5px',
-                cursor: showFixes && selectedFixIndex !== null && isCorrectFix(selectedFixIndex) && fixReasoning.length >= 10 ? 'pointer' : 'not-allowed',
-                opacity: showFixes && selectedFixIndex !== null && isCorrectFix(selectedFixIndex) && fixReasoning.length >= 10 ? 1 : 0.5
+                cursor: showFixes && selectedFixIndex !== null && isCorrectFix(selectedFixIndex) ? 'pointer' : 'not-allowed',
+                opacity: showFixes && selectedFixIndex !== null && isCorrectFix(selectedFixIndex) ? 1 : 0.5
               }}
             >
               RESTART ACTIVITY
