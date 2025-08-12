@@ -45,6 +45,7 @@ export default function Home() {
   const [selectedFixIndex, setSelectedFixIndex] = useState<number | null>(null);
   const [fixReasoning, setFixReasoning] = useState<string>('');
   const [isClient, setIsClient] = useState(false);
+  const [showMethodResponse, setShowMethodResponse] = useState(false);
   const questions: Question[] = data;
 
   // Initialize client side to avoid hydration mismatch
@@ -86,6 +87,7 @@ export default function Home() {
       setShowFixes(false);
       setSelectedFixIndex(null);
       setFixReasoning('');
+      setShowMethodResponse(false);
     }
   };
 
@@ -119,6 +121,7 @@ export default function Home() {
     setShowFixes(false);
     setSelectedFixIndex(null);
     setFixReasoning('');
+    setShowMethodResponse(false);
     
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -132,6 +135,7 @@ export default function Home() {
       setShowFixes(false);
       setSelectedFixIndex(null);
       setFixReasoning('');
+      setShowMethodResponse(false);
     }
   };
 
@@ -151,6 +155,13 @@ export default function Home() {
 
   const handleMethodSelect = (methodIndex: number) => {
     setSelectedMethodIndex(methodIndex);
+    if (showMethodResponse) {
+      setShowMethodResponse(false);
+    }
+  };
+
+  const handleSubmitMethodChoice = () => {
+    setShowMethodResponse(true);
     // Delay scroll to allow DOM to update with reasoning box
     setTimeout(() => {
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
@@ -238,28 +249,28 @@ export default function Home() {
                 display: 'flex', 
                 padding: '12px', 
                 marginBottom: index === questions[currentQuestionIndex].subElements.length - 1 ? '0' : '12px', 
-                cursor: showFixes ? 'not-allowed' : 'pointer',
+                cursor: showFixes || (showMethodResponse && selectedMethodIndex !== null && isCorrectAnswer(selectedMethodIndex)) ? 'not-allowed' : 'pointer',
                 borderRadius: '8px',
                 transition: 'all 0.3s ease',
-                opacity: showFixes ? 0.6 : 1,
+                opacity: showFixes || (showMethodResponse && selectedMethodIndex !== null && isCorrectAnswer(selectedMethodIndex)) ? 0.6 : 1,
                 ...getMethodStyle(index)
               }}
               onMouseEnter={(e) => {
-                if (selectedMethodIndex !== index && !showFixes) {
+                if (selectedMethodIndex !== index && !showFixes && (!showMethodResponse || (selectedMethodIndex !== null && !isCorrectAnswer(selectedMethodIndex)))) {
                   e.currentTarget.style.backgroundColor = '#e8f5e8';
                   e.currentTarget.style.transform = 'scale(1.01)';
                   e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
                 }
               }}
               onMouseLeave={(e) => {
-                if (selectedMethodIndex !== index && !showFixes) {
+                if (selectedMethodIndex !== index && !showFixes && (!showMethodResponse || (selectedMethodIndex !== null && !isCorrectAnswer(selectedMethodIndex)))) {
                   const baseStyle = getMethodStyle(index);
                   e.currentTarget.style.backgroundColor = baseStyle.backgroundColor;
                   e.currentTarget.style.transform = baseStyle.transform;
                   e.currentTarget.style.boxShadow = baseStyle.boxShadow;
                 }
               }}
-              onClick={() => !showFixes && handleMethodSelect(index)}
+              onClick={() => !showFixes && (!showMethodResponse || (selectedMethodIndex !== null && !isCorrectAnswer(selectedMethodIndex))) && handleMethodSelect(index)}
             >
               <p style={{ textAlign: 'left', lineHeight: '1.6', margin: '0', flex: '1', width: '100%', textWrap: 'wrap' }}>
                 {method['Experimental Methods']}
@@ -267,7 +278,25 @@ export default function Home() {
             </div>
           ))}
 
-          {selectedMethodIndex !== null && (
+          {selectedMethodIndex !== null && !showMethodResponse && (
+            <div style={{ textAlign: 'center', marginTop: '20px' }}>
+              <button 
+                className="button"
+                onClick={handleSubmitMethodChoice}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '16px',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer'
+                }}
+              >
+                SUBMIT CHOICE
+              </button>
+            </div>
+          )}
+
+          {selectedMethodIndex !== null && showMethodResponse && (
             <div style={{ 
               display: 'flex', 
               border: isCorrectAnswer(selectedMethodIndex) ? '2px solid #22c55e' : '2px solid #ef4444',
@@ -402,14 +431,14 @@ export default function Home() {
           <button 
             className="button"
             onClick={handleContinue}
-            disabled={selectedMethodIndex === null || !isCorrectAnswer(selectedMethodIndex)}
+            disabled={selectedMethodIndex === null || !showMethodResponse || !isCorrectAnswer(selectedMethodIndex)}
             style={{
               padding: '10px 20px',
               fontSize: '16px',
               border: 'none',
               borderRadius: '5px',
-              cursor: selectedMethodIndex !== null && isCorrectAnswer(selectedMethodIndex) ? 'pointer' : 'not-allowed',
-              opacity: selectedMethodIndex !== null && isCorrectAnswer(selectedMethodIndex) ? 1 : 0.5
+              cursor: selectedMethodIndex !== null && showMethodResponse && isCorrectAnswer(selectedMethodIndex) ? 'pointer' : 'not-allowed',
+              opacity: selectedMethodIndex !== null && showMethodResponse && isCorrectAnswer(selectedMethodIndex) ? 1 : 0.5
             }}
           >
             CONTINUE
